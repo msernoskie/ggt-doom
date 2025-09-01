@@ -76,8 +76,9 @@ const loadRuffleScript = (): Promise<void> => {
       return;
     }
 
-    let lastError: Error | null = null;
-
+    // Skip local file attempt and load directly from CDN
+    // This avoids syntax errors from loading stub files
+    /*
     // Try local file first
     console.log('Attempting to load Ruffle from local file...');
     try {
@@ -97,9 +98,10 @@ const loadRuffleScript = (): Promise<void> => {
         failedScript.remove();
       }
     }
+    */
 
-    // Try CDN fallback
-    console.log('Attempting to load Ruffle from CDN...');
+    // Load directly from CDN
+    console.log('Loading Ruffle from CDN...');
     try {
       await loadScriptFromSource('https://unpkg.com/@ruffle-rs/ruffle@latest/ruffle.js', 'CDN');
       ruffleScriptLoaded = true;
@@ -108,7 +110,7 @@ const loadRuffleScript = (): Promise<void> => {
       resolve();
       return;
     } catch (error) {
-      console.error('CDN Ruffle script also failed:', error);
+      console.error('CDN Ruffle script failed:', error);
       const cdnError = error instanceof Error ? error : new Error('Unknown CDN loading error');
       
       // Remove the failed CDN script element
@@ -120,10 +122,8 @@ const loadRuffleScript = (): Promise<void> => {
       // Reset state for potential retry
       ruffleLoadingPromise = null;
       
-      // Reject with combined error information
-      reject(new Error(
-        `Failed to load Ruffle from both sources. Local: ${lastError?.message || 'Unknown error'}. CDN: ${cdnError.message}`
-      ));
+      // Reject with error information
+      reject(new Error(`Failed to load Ruffle from CDN: ${cdnError.message}`));
     }
   });
 

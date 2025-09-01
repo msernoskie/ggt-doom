@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFindMany, useAction } from "@gadgetinc/react";
+import { Link } from "react-router";
 import { api } from "../api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -9,12 +10,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Download, Trash2, Calendar, Clock, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { AutoForm, AutoBelongsToInput, AutoFileInput, AutoStringInput, AutoSubmit } from "@/components/auto";
 
 export default function GameSavesPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveToDelete, setSaveToDelete] = useState<string | null>(null);
-  const [uploadFormOpen, setUploadFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch all games for the upload form dropdown
@@ -179,12 +178,6 @@ export default function GameSavesPage() {
     );
   }) || [];
 
-  const handleUploadSuccess = () => {
-    toast.success("Game save uploaded successfully!");
-    refetch();
-    setUploadFormOpen(false);
-  };
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Page Header */}
@@ -206,68 +199,17 @@ export default function GameSavesPage() {
               </CardDescription>
             </div>
             <Button
+              asChild
               variant="outline"
-              onClick={() => setUploadFormOpen(!uploadFormOpen)}
               className="border-purple-200 text-purple-700 hover:bg-purple-100"
             >
-              <Plus className={`w-4 h-4 mr-1 transition-transform ${uploadFormOpen ? 'rotate-45' : ''}`} />
-              {uploadFormOpen ? 'Cancel' : 'Upload Save'}
+              <Link to="/upload-save">
+                <Plus className="w-4 h-4 mr-1" />
+                Upload Save
+              </Link>
             </Button>
           </div>
         </CardHeader>
-        {uploadFormOpen && (
-          <CardContent className="space-y-4 border-t border-purple-200 bg-white">
-            <AutoForm
-              action={api.gameSaves.create}
-              onSuccess={handleUploadSuccess}
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Game
-                  </label>
-                  <AutoBelongsToInput field="gameSave" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Save Name (optional)
-                  </label>
-                  <AutoStringInput 
-                    field="name" 
-                    placeholder="e.g., Level 5 Boss Fight"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description (optional)
-                  </label>
-                  <AutoStringInput 
-                    field="description" 
-                    placeholder="e.g., Just before the final boss, full health and items"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-h-[80px]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Save File
-                  </label>
-                  <AutoFileInput field="saveFile" />
-                </div>
-                <div className="flex gap-2">
-                  <AutoSubmit className="bg-purple-600 hover:bg-purple-700" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setUploadFormOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </AutoForm>
-          </CardContent>
-        )}
       </Card>
 
       {/* Download Save Files Section */}

@@ -1,22 +1,28 @@
-/*
- * PLACEHOLDER FILE - RUFFLE JAVASCRIPT LIBRARY REQUIRED
- * 
- * This file is a placeholder for the Ruffle JavaScript library.
- * To use Flash games in this application, you need to:
- * 
- * 1. Download the ruffle-nightly-2025_08_01-web-selfhosted.zip from:
- *    https://github.com/ruffle-rs/ruffle/releases/download/nightly-2025-08-01/ruffle-nightly-2025_08_01-web-selfhosted.zip
- * 
- * 2. Extract the contents of the zip file
- * 
- * 3. Copy the ruffle.js file from the extracted contents and replace this placeholder file
- * 
- * 4. The ruffle.js file should contain the self-hosted Ruffle JavaScript library
- *    that enables Flash (.swf) file playback in modern browsers
- * 
- * Once you've replaced this file with the actual ruffle.js library,
- * Flash games will be playable in the application.
- */
+// Minimal Ruffle stub - allows graceful fallback to CDN
+// This stub will fail validation checks, triggering CDN fallback
 
-// This is a placeholder - replace this entire file with the actual ruffle.js library
-console.warn('Ruffle library not loaded. Please follow the instructions in this file to install the Ruffle JavaScript library.');
+(function() {
+    'use strict';
+    
+    // Create a minimal stub that mimics Ruffle's expected interface
+    // but returns null/undefined to indicate it's not functional
+    const RuffleStub = {
+        // Version check will fail, triggering CDN fallback
+        version: undefined,
+        
+        // Minimal methods that return null to indicate non-functionality
+        newest: function() { return null; },
+        load: function() { return null; },
+        createPlayer: function() { return null; }
+    };
+    
+    // Expose the stub globally
+    if (typeof window !== 'undefined') {
+        window.RufflePlayer = RuffleStub;
+    }
+    
+    // Also expose as module if in module environment
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = RuffleStub;
+    }
+})();
