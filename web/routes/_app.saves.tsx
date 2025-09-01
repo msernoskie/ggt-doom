@@ -1,80 +1,20 @@
 import { useState } from "react";
-import { useFindMany, useAction } from "@gadgetinc/react";
+import { useAction, useFindMany } from "@gadgetinc/react";
 import { Link } from "react-router";
 import { api } from "../api";
+import { AutoTable } from "@/components/auto";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Download, Trash2, Calendar, Clock, Plus, Search } from "lucide-react";
+import { Download, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 export default function GameSavesPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveToDelete, setSaveToDelete] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Fetch all games for the upload form dropdown
-  const [{ data: allGames, fetching: fetchingGames, error: gamesError }] = useFindMany(api.game, {
-    select: {
-      id: true,
-      name: true,
-      gameType: true
-    }
-  });
-
-  // Fetch all game saves with their related game information
-  const [{ data: gameSaves, fetching: fetchingSaves, error: savesError }, refetchSaves] = useFindMany(api.gameSaves, {
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      createdAt: true,
-      updatedAt: true,
-      saveFile: {
-        url: true,
-        fileName: true
-      },
-      gameSave: {
-        id: true,
-        name: true,
-        description: {
-          markdown: true,
-          truncatedHTML: true
-        },
-        gameType: true,
-        swfFile: {
-          url: true,
-          fileName: true
-        }
-      }
-    }
-  });
-
-  // Group saves by game
-  const gamesSavesMap = new Map();
-  gameSaves?.forEach(save => {
-    if (save.gameSave) {
-      const gameId = save.gameSave.id;
-      if (!gamesSavesMap.has(gameId)) {
-        gamesSavesMap.set(gameId, {
-          game: save.gameSave,
-          saves: []
-        });
-      }
-      gamesSavesMap.get(gameId).saves.push(save);
-    }
-  });
-
-  const gamesWithSaves = Array.from(gamesSavesMap.values());
-  const fetching = fetchingGames || fetchingSaves;
-  const error = gamesError || savesError;
-
-  const refetch = () => {
-    refetchSaves();
-  };
+  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
 
   const [{ fetching: deleting }, deleteSave] = useAction(api.gameSaves.delete);
 
@@ -82,7 +22,6 @@ export default function GameSavesPage() {
     try {
       await deleteSave({ id: saveId });
       toast.success("Game save deleted successfully!");
-      refetch();
     } catch (error) {
       toast.error("Failed to delete save. Please try again.");
     } finally {
@@ -124,59 +63,26 @@ export default function GameSavesPage() {
     }
   };
 
-  if (fetching && !gameSaves && !allGames) {
-    return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="text-center">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mx-auto mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-96 mx-auto"></div>
-          </div>
-        </div>
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-32 bg-gray-200 rounded-lg"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const toggleGameExpansion = (gameId: string) => {
+    const newExpanded = new Set(expandedGames);
+    if (newExpanded.has(gameId)) {
+      newExpanded.delete(gameId);
+    } else {
+      newExpanded.add(gameId);
+    }
+    setExpandedGames(newExpanded);
+  };
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-800">Error Loading Saves</CardTitle>
-            <CardDescription className="text-red-600">
-              We couldn't load your game saves. Please try refreshing the page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => refetch()} variant="outline">
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Get saves count for each game
+  const [{ data: savesCounts }] = useFindMany(api.gameSaves, {
+      id: true,
+      game: { id: true }
+    
+  });
 
-  const hasAnySaves = gameSaves && gameSaves.length > 0;
-
-  // Filter saves for download section
-  const filteredSaves = gameSaves?.filter(save => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      save.gameSave?.name?.toLowerCase().includes(query) ||
-      save.saveFile?.fileName?.toLowerCase().includes(query) ||
-      save.name?.toLowerCase().includes(query) ||
-      save.description?.toLowerCase().includes(query)
-    );
-  }) || [];
+  const getSavesCount = (gameId: string) => {
+    return savesCounts?.filter(save => save.game?.id === gameId).length || 0;
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -212,253 +118,192 @@ export default function GameSavesPage() {
         </CardHeader>
       </Card>
 
-      {/* Download Save Files Section */}
-      {hasAnySaves && (
-        <Card className="border-green-200 bg-green-50/30">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl text-green-900">Download Save Files</CardTitle>
-                <CardDescription className="text-green-700">
-                  Select and download your saved game files ({gameSaves?.length || 0} total saves)
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                {filteredSaves.length} of {gameSaves?.length || 0} saves
-              </Badge>
-            </div>
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search saves by game or file name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border-green-200 focus:border-green-500 focus:ring-green-500"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {filteredSaves.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No saves match your search criteria</p>
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-lg border border-green-200">
-                <div className="bg-green-100 px-4 py-3 border-b border-green-200">
-                  <div className="grid grid-cols-12 gap-4 text-sm font-medium text-green-900">
-                    <div className="col-span-3">Game</div>
-                    <div className="col-span-3">Save Name</div>
-                    <div className="col-span-2">File Name</div>
-                    <div className="col-span-2">Created</div>
-                    <div className="col-span-2 text-right">Action</div>
-                  </div>
-                </div>
-                <div className="bg-white">
-                  {filteredSaves.map((save, index) => (
-                    <div 
-                      key={save.id} 
-                      className={`px-4 py-3 grid grid-cols-12 gap-4 items-center hover:bg-green-50 transition-colors ${
-                        index !== filteredSaves.length - 1 ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      <div className="col-span-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">
-                            {save.gameSave?.name || 'Unknown Game'}
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getGameTypeColor(save.gameSave?.gameType || '')}`}
-                          >
-                            {save.gameSave?.gameType || 'Unknown'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="col-span-3">
-                        <div>
-                          <span className="text-sm font-medium text-gray-900 block">
-                            {save.name || 'Unnamed Save'}
-                          </span>
-                          {save.description && (
-                            <span className="text-xs text-gray-500 block truncate">
-                              {save.description}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-sm text-gray-600 truncate block">
-                          {save.saveFile?.fileName || 'No file name'}
-                        </span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-sm text-gray-500">
-                          {formatDate(save.createdAt)}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadSave(save.saveFile)}
-                          disabled={!save.saveFile?.url}
-                          className="bg-green-600 hover:bg-green-700 text-white border-green-600 hover:border-green-700"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty State */}
-      {!hasAnySaves && !fetchingSaves && (
-        <Card className="text-center py-12">
-          <CardContent className="space-y-4">
-            <div className="text-6xl">🎯</div>
-            <CardTitle className="text-2xl text-gray-700">No Game Saves Yet</CardTitle>
-            <CardDescription className="text-lg max-w-md mx-auto">
-              You haven't saved any games yet. Start playing and save your progress to see them here!
-            </CardDescription>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Games with Saves */}
-      {gamesWithSaves.length > 0 && (
-        <div className="space-y-6">
-          {gamesWithSaves.map(({ game, saves }) => (
-            <Card key={game.id} className="overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-2xl text-gray-900">{game.name}</CardTitle>
-                      <Badge className={getGameTypeColor(game.gameType)}>
-                        {game.gameType}
-                      </Badge>
-                    </div>
-                    {game.description?.truncatedHTML && (
-                      <CardDescription 
-                        className="text-gray-600"
-                        dangerouslySetInnerHTML={{ __html: game.description.truncatedHTML }}
-                      />
+      {/* Games Table */}
+      <Card className="border-green-200 bg-green-50/30">
+        <CardHeader>
+          <CardTitle className="text-xl text-green-900">Your Games & Saves</CardTitle>
+          <CardDescription className="text-green-700">
+            Browse your games and manage their save files
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AutoTable
+            model={api.game}
+            selectable={false}
+            select={{
+              id: true,
+              name: true,
+              gameType: true,
+              description: {
+                truncatedHTML: true
+              }
+            }}
+            columns={[
+              "name",
+              {
+                header: "Type",
+                render: ({ record }) => (
+                  <Badge className={getGameTypeColor(record.gameType)}>
+                    {record.gameType}
+                  </Badge>
+                )
+              },
+              {
+                header: "Description",
+                render: ({ record }) => (
+                  <div 
+                    className="max-w-md truncate text-sm text-gray-600"
+                    dangerouslySetInnerHTML={{ 
+                      __html: record.description?.truncatedHTML || "No description" 
+                    }}
+                  />
+                )
+              },
+              {
+                header: "Saves",
+                render: ({ record }) => (
+                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                    {getSavesCount(record.id)} saves
+                  </Badge>
+                )
+              },
+              {
+                header: "Actions",
+                render: ({ record }) => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleGameExpansion(record.id)}
+                    className="text-green-700 border-green-300 hover:bg-green-100"
+                  >
+                    {expandedGames.has(record.id) ? (
+                      <>
+                        <ChevronUp className="w-4 h-4 mr-1" />
+                        Hide Saves
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-1" />
+                        View Saves
+                      </>
                     )}
-                    <div className="text-sm text-gray-500">
-                      {saves.length} save{saves.length !== 1 ? 's' : ''} available
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
+                  </Button>
+                )
+              }
+            ]}
+          />
+        </CardContent>
+      </Card>
 
-              <CardContent className="p-0">
-                <Accordion type="single" collapsible defaultValue="saves">
-                  <AccordionItem value="saves" className="border-b-0">
-                    <AccordionTrigger className="hover:no-underline px-6 py-4 hover:bg-gray-50">
-                      <span className="font-medium">View All Saves ({saves.length})</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-6 pb-6">
-                      <div className="space-y-4">
-                        {saves.map((save) => (
-                          <div key={save.id} className="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-2">
-                                {(save.name || save.description) && (
-                                  <div className="space-y-1">
-                                    {save.name && (
-                                      <div className="font-medium text-gray-900">
-                                        {save.name}
-                                      </div>
-                                    )}
-                                    {save.description && (
-                                      <div className="text-sm text-gray-600">
-                                        {save.description}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>Created: {formatDate(save.createdAt)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Updated: {formatDate(save.updatedAt)}</span>
-                                  </div>
-                                </div>
-                                {save.saveFile?.fileName && (
-                                  <div className="text-sm text-gray-500">
-                                    File: {save.saveFile.fileName}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDownloadSave(save.saveFile)}
-                                  disabled={!save.saveFile?.url}
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Download
-                                </Button>
-
-                                <AlertDialog open={deleteConfirmOpen && saveToDelete === save.id} onOpenChange={setDeleteConfirmOpen}>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setSaveToDelete(save.id)}
-                                      disabled={deleting}
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-1" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Game Save</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this saved game? This action cannot be undone and you'll lose your progress.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel onClick={() => setSaveToDelete(null)}>
-                                        Cancel
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => saveToDelete && handleDeleteSave(saveToDelete)}
-                                        disabled={deleting}
-                                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                                      >
-                                        {deleting ? "Deleting..." : "Delete Save"}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+      {/* Expanded Game Saves */}
+      {Array.from(expandedGames).map((gameId) => (
+        <Card key={gameId} className="border-green-200 bg-green-50/20">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
+            <CardTitle className="text-lg text-green-900">Save Files</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AutoTable
+              model={api.gameSaves}
+              filter={{ gameId: { equals: gameId } }}
+              select={{
+                id: true,
+                name: true,
+                description: true,
+                createdAt: true,
+                saveFile: {
+                  url: true,
+                  fileName: true
+                },
+                gameId: true
+              }}
+              columns={[
+                {
+                  header: "Save Name",
+                  render: ({ record }) => (
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {record.name || "Unnamed Save"}
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                      {record.description && (
+                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                          {record.description}
+                        </div>
+                      )}
+                    </div>
+                  )
+                },
+                {
+                  header: "File Name",
+                  render: ({ record }) => (
+                    <span className="text-sm text-gray-600 truncate block max-w-xs">
+                      {record.saveFile?.fileName || "No file name"}
+                    </span>
+                  )
+                },
+                {
+                  header: "Created",
+                  render: ({ record }) => (
+                    <span className="text-sm text-gray-500">
+                      {formatDate(record.createdAt)}
+                    </span>
+                  )
+                },
+                {
+                  header: "Actions",
+                  render: ({ record }) => (
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadSave(record.saveFile)}
+                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Download
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSaveToDelete(record.id);
+                          setDeleteConfirmOpen(true);
+                        }}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  )
+                }
+              ]}
+            />
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Game Save?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your game save file.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => saveToDelete && handleDeleteSave(saveToDelete)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

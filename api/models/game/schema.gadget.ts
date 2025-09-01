@@ -11,14 +11,9 @@ export const schema: GadgetModel = {
       type: "richText",
       storageKey: "SBBNcb1tCtHv::oCce2Z7LB_C8",
     },
-    fileSize: {
-      type: "number",
-      decimals: 0,
-      storageKey: "nLFI7grkttzY",
-    },
     gameSaves: {
       type: "hasMany",
-      children: { model: "gameSaves", belongsToField: "gameSave" },
+      children: { model: "gameSaves", belongsToField: "game" },
       storageKey: "DB1g2lht_Gnp",
     },
     gameType: {
@@ -35,17 +30,10 @@ export const schema: GadgetModel = {
       validations: { required: true, unique: true },
       storageKey: "OGDfLe-tvHOP::lmckfQCCnhVZ",
     },
-    originalFileName: { type: "string", storageKey: "8F4ACHfNeBhw" },
     swfFile: {
       type: "file",
       allowPublicAccess: true,
       storageKey: "B-55itN47zYz",
-    },
-    user: {
-      type: "belongsTo",
-      validations: { required: true },
-      parent: { model: "user" },
-      storageKey: "DVYHFsuyF7oF",
     },
   },
 };

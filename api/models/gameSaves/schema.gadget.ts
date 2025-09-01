@@ -8,10 +8,10 @@ export const schema: GadgetModel = {
   storageKey: "zM9B22qMtSTF",
   fields: {
     description: { type: "string", storageKey: "6g1AqePJ8m1g" },
-    gameSave: {
+    game: {
       type: "belongsTo",
       parent: { model: "game" },
-      storageKey: "Rt0QulWElDqa",
+      storageKey: "zGozNyEpBVA1",
     },
     name: { type: "string", storageKey: "j1g_pWuGrNPV" },
     saveFile: {

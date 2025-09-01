@@ -130,9 +130,16 @@ export default function UploadSavePage() {
                     </div>
                   </div>
 
-                  {/* Hidden belongsTo input that automatically sets the game relationship */}
-                  <div className="hidden">
-                    <AutoBelongsToInput field="gameSave" value={selectedGame.id} />
+                  {/* Game relationship input - disabled to show selected game */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Game
+                    </label>
+                    <AutoBelongsToInput 
+                      field="game" 
+                      disabled 
+                      defaultValue={selectedGame.id}
+                    />
                   </div>
 
                   <AutoInput field="name" />
