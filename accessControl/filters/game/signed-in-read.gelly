@@ -1,0 +1,4 @@
+filter ($session: Session, $user: User) on Game [
+  where true
+]
+# Allow all signed-in users to read all games
