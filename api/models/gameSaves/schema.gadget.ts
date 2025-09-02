@@ -10,6 +10,7 @@ export const schema: GadgetModel = {
     description: { type: "string", storageKey: "6g1AqePJ8m1g" },
     game: {
       type: "belongsTo",
+      validations: { required: true },
       parent: { model: "game" },
       storageKey: "zGozNyEpBVA1",
     },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction, useFindMany } from "@gadgetinc/react";
+import { useFindMany } from "@gadgetinc/react";
 import { Link } from "react-router";
 import { api } from "../api";
 import { AutoTable } from "@/components/auto";
@@ -7,28 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Download, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 export default function GameSavesPage() {
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [saveToDelete, setSaveToDelete] = useState<string | null>(null);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
-
-  const [{ fetching: deleting }, deleteSave] = useAction(api.gameSaves.delete);
-
-  const handleDeleteSave = async (saveId: string) => {
-    try {
-      await deleteSave({ id: saveId });
-      toast.success("Game save deleted successfully!");
-    } catch (error) {
-      toast.error("Failed to delete save. Please try again.");
-    } finally {
-      setDeleteConfirmOpen(false);
-      setSaveToDelete(null);
-    }
-  };
 
   const handleDownloadSave = (saveFile: any) => {
     if (saveFile?.url) {
@@ -251,30 +234,15 @@ export default function GameSavesPage() {
                 {
                   header: "Actions",
                   render: ({ record }) => (
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadSave(record.saveFile)}
-                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Download
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSaveToDelete(record.id);
-                          setDeleteConfirmOpen(true);
-                        }}
-                        className="text-red-600 border-red-300 hover:bg-red-50"
-                        disabled={deleting}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadSave(record.saveFile)}
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </Button>
                   )
                 }
               ]}
@@ -283,27 +251,7 @@ export default function GameSavesPage() {
         </Card>
       ))}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Game Save?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your game save file.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => saveToDelete && handleDeleteSave(saveToDelete)}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }
